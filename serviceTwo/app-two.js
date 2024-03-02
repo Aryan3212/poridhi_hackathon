@@ -6,6 +6,8 @@ const configureOpenTelemetry = require("./tracing");
 configureOpenTelemetry("validate");
 const { context, trace, propagation } = require("@opentelemetry/api");
 const { setKeyValue, getValueByKey } = require('./redis/client');
+const pool = require('./sql');
+const http = require('http');
 
 app.get("/validateuser", async (req, res) => {
   const ctx = propagation.extract(context.active(), req.headers); // Extract context from incoming request headers
@@ -16,6 +18,16 @@ app.get("/validateuser", async (req, res) => {
     trace.getSpan(ctx)?.spanContext()
   ); // Retrieve span from extracted context
   try{
+    pool.getConnection((err, connection) => {
+      if (err) {
+        console.error('Error getting MySQL connection:', err);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+      console.log("here bro")
+      const userInfo = { name: "John Doe", email: "john.doe@example.com" };
+        res.json(userInfo);
+    });
     await setKeyValue('user_info', JSON.stringify("aryan"));
   }catch(e){
     console.log(e);
