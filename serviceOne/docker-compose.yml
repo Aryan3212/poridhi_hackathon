@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+    app:
+        build: .
+        ports:
+            - '3000:3000'
+        depends_on:
+            - rabbitmq
+        environment:
+            RABBITMQ_URL: amqp://user:user@rabbitmq
+    rabbitmq:
+        image: 'rabbitmq:3-management'
+        ports:
+            - '15672:15672'
+            - '5672:5672'
+        environment:
+            RABBITMQ_DEFAULT_USER: 'user'
+            RABBITMQ_DEFAULT_PASS: 'user'
+            RABBITMQ_DEFAULT_VHOST: '/'
