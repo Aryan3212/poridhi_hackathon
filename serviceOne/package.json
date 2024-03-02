@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.41.1",
     "@opentelemetry/core": "^1.20.0",
     "@opentelemetry/exporter-jaeger": "^1.20.0",
     "@opentelemetry/exporter-prometheus": "^0.48.0",
