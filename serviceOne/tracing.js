@@ -12,9 +12,7 @@ const {
 const {
   RedisInstrumentation,
 } = require("@opentelemetry/instrumentation-redis");
-const {
-  MySqlInstrumentation,
-} = require("@opentelemetry/instrumentation-mysql");
+
 function configureOpenTelemetry(serviceName) {
   // Create a tracer provider and register the Express instrumentation
   const provider = new NodeTracerProvider({
@@ -42,7 +40,6 @@ function configureOpenTelemetry(serviceName) {
       instrumentations: [
         new ExpressInstrumentation(),
         new RedisInstrumentation(),
-        new MySqlInstrumentation(),
       ],
     });
 
