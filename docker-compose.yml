@@ -4,24 +4,96 @@ services:
         build: ./serviceOne
         ports:
             - '3000:3000'
+        expose:
+            - '3000'
         depends_on:
             - rabbitmq
+            - redis
         environment:
             RABBITMQ_URL: amqp://user:user@rabbitmq
+        networks:
+            - my_network
     app-two:
         build: ./serviceTwo
         ports:
             - '5000:5000'
+            - '9464:9464'
+        expose:
+            - '5000'
+            - '9464'
         depends_on:
             - rabbitmq
+            - redis
         environment:
             RABBITMQ_URL: amqp://user:user@rabbitmq
+        networks:
+            - my_network
     rabbitmq:
         image: 'rabbitmq:3-management'
         ports:
             - '15672:15672'
             - '5672:5672'
+        expose:
+            - '15672'
         environment:
             RABBITMQ_DEFAULT_USER: 'user'
             RABBITMQ_DEFAULT_PASS: 'user'
             RABBITMQ_DEFAULT_VHOST: '/'
+        networks:
+            - my_network
+    redis:
+        image: redis:alpine
+        ports: 
+            - 6379:6379
+        environment:
+            REDIS_PASSWORD: my-password
+            REDIS_PORT: 6379
+            REDIS_DATABASES: 16
+        networks:
+            - my_network
+    prometheus:
+        image: prom/prometheus
+        container_name: prometheus
+        ports:
+            - "9090:9090"
+        expose:
+            - '9090'
+        volumes:
+            - ./prometheus/prometheus_data:/prometheus
+            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        networks:
+            - my_network
+    grafana:
+        image: grafana/grafana
+        container_name: grafana
+        ports:
+            - "3002:3000"  # Map Grafana port 3000 from the container to the host
+        expose:
+            - '3002'
+        environment:
+            - GF_SECURITY_ADMIN_PASSWORD=admin # Set the Grafana admin password
+        volumes:
+            - ./grafana_data:/var/lib/grafana 
+        networks:
+            - my_network
+    jaeger:
+        image: jaegertracing/all-in-one:latest
+        container_name: jaeger
+        environment:
+            - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+        ports:
+            - "5775:5775/udp"
+            - "6831:6831/udp"
+            - "6832:6832/udp"
+            - "5778:5778"
+            - "16686:16686"
+            - "14268:14268"
+            - "14250:14250"
+            - "9411:9411"
+        expose:
+            - '16686'
+        networks:
+            - my_network
+networks:
+    my_network:
+        driver: bridge

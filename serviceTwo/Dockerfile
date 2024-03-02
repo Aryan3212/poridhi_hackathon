@@ -4,12 +4,8 @@ WORKDIR /app
 
 COPY package*.json ./
 
-USER node
+RUN npm install
 
-RUN npm install --force
-
-COPY --chown=node:node . .
-
-EXPOSE 5000
+COPY . .
 
 CMD [ "node", "app-two.js" ]

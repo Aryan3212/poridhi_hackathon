@@ -23,10 +23,10 @@ scrape_configs:
     # scheme defaults to 'http'.
 
     static_configs:
-    - targets: ['localhost:9090']
+    - targets: ['prometheus:9090']
 
   # Here's a configuration for scraping metrics from a Node.js application
   # with OpenTelemetry's PrometheusExporter running on port 9464.
   - job_name: 'nodejs-application'
     static_configs:
-    - targets: ['192.168.64.1:9464']
+    - targets: ['app-two:9464']

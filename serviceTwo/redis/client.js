@@ -36,7 +36,7 @@ const redisValueRetrievalErrorCounter = meter.createCounter('redis_value_retriev
 
 // Connect to Redis server
 const client = redis.createClient({
-  url: 'redis://localhost:6379' // Default Redis URL
+  url: 'redis://default:my-password@redis:6379',
 });
 client.connect();
 

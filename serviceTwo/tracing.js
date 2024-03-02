@@ -25,7 +25,7 @@ function configureOpenTelemetry(serviceName) {
   // Configure and register Jaeger exporter
   const exporter = new JaegerExporter({
     serviceName: serviceName,
-    agentHost: "localhost", // Change this to your Jaeger host
+    agentHost: "jaeger", // Change this to your Jaeger host
     agentPort: 16686, // Change this to your Jaeger port
   });
 

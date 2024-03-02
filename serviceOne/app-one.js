@@ -7,8 +7,8 @@ const amqplib = require('amqplib');
 const axios = require("axios");
 
 // Assuming these are defined as environment variables or constants
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
-
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://rabbitmq';
+console.log('rabbitmquql', RABBITMQ_URL)
 const tracerProvider = configureOpenTelemetry("provider-service");
 
 let rabbitConnection;
@@ -58,7 +58,7 @@ app.get("/getuser", async (req, res) => {
       async () => {
         const carrier = {};
         propagation.inject(context.active(), carrier);
-        return axios.get("http://localhost:5000/validateuser", { headers: carrier });
+        return axios.get("http://app-two:5000/validateuser", { headers: carrier });
       }
     );
 
