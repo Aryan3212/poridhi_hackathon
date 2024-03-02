@@ -1,9 +1,17 @@
 version: '3.8'
 services:
-    app:
-        build: .
+    app-one:
+        build: ./serviceOne
         ports:
             - '3000:3000'
+        depends_on:
+            - rabbitmq
+        environment:
+            RABBITMQ_URL: amqp://user:user@rabbitmq
+    app-two:
+        build: ./serviceTwo
+        ports:
+            - '5000:5000'
         depends_on:
             - rabbitmq
         environment:

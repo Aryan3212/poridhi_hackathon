@@ -1,12 +1,12 @@
 FROM node:18.17.0-alpine
 
-WORKDIR /home/node/app
+WORKDIR /app
 
 COPY package*.json ./
 
 USER node
 
-RUN npm install
+RUN npm install --force
 
 COPY --chown=node:node . .
 

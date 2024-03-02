@@ -1,93 +1,103 @@
 const configureOpenTelemetry = require("./tracing");
-
 const express = require("express");
 const app = express();
 const port = 3000;
 const { trace, context, propagation } = require("@opentelemetry/api");
-const tracerProvider = configureOpenTelemetry("start");
+const amqplib = require('amqplib');
 const axios = require("axios");
+
+// Assuming these are defined as environment variables or constants
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost';
+
+const tracerProvider = configureOpenTelemetry("provider-service");
+
+let rabbitConnection;
+const exchange = 'logs'
+
+const sendRabbitMqMessage = async (message) => {
+  if (!rabbitConnection) {
+    rabbitConnection = await amqplib.connect(RABBITMQ_URL);
+  }
+
+  const channel = await rabbitConnection.createChannel();
+  /* Type "fanout" means sending the message to all consumers that subscribed to that exchange. */
+  await channel.assertExchange(exchange, 'fanout')
+  /* Notice that we pass an empty string as the queue name. This means the queue will be defined per consumer. */
+  await channel.publish(exchange, '', Buffer.from(message))
+}
 
 app.use((req, res, next) => {
   const tracer = tracerProvider.getTracer("express-tracer");
-  const span = tracer.startSpan("hira");
+  const span = tracer.startSpan("HTTP request");
 
-  // Add custom attributes or log additional information if needed
-  span.setAttribute("user", "user made");
+  span.setAttribute("http.method", req.method);
+  span.setAttribute("http.url", req.url);
 
-  // Pass the span to the request object for use in the route handler
   context.with(trace.setSpan(context.active(), span), () => {
     next();
   });
 });
 
 app.get("/getuser", async (req, res) => {
-  // Access the parent span from the request's context
   const parentSpan = trace.getSpan(context.active());
 
   try {
-    // Simulate some processing
-    const user = {
-      id: 1,
-      name: "John Doe",
-      email: "john.doe@example.com",
-    };
+    const user = { id: 1, name: "John Doe", email: "john.doe@example.com" };
 
     if (parentSpan) {
       parentSpan.setAttribute("user.id", user.id);
       parentSpan.setAttribute("user.name", user.name);
     }
 
-    // Call the /validateuser endpoint on apptwo before sending the user data
-    // Ensure the context is propagated with the outgoing request
+    const message = JSON.stringify(user);
+    console.log(`Send message: '${message}'`);
+    await sendRabbitMqMessage(message);
+
     const validateResponse = await context.with(
       trace.setSpan(context.active(), parentSpan),
       async () => {
-        // Prepare headers for context injection
         const carrier = {};
         propagation.inject(context.active(), carrier);
-
-        // Make the HTTP request with the injected context in headers
-        return axios.get("http://localhost:5000/validateuser", {
-          headers: carrier,
-        });
+        return axios.get("http://localhost:5000/validateuser", { headers: carrier });
       }
     );
 
-    console.log("Validation response:", validateResponse.data); // Log or use the response as needed
+    console.log("Response from validateuser:", validateResponse.data);
+    res.json({ success: true, user });
 
-    // Send the user data as a JSON response
-    res.json(user);
   } catch (error) {
-    if (parentSpan) {
-      parentSpan.recordException(error);
-    }
-    res.status(500).send(error.message);
+    console.error(error);
+    res.status(500).json({ success: false, error: "Error sending message to RabbitMQ" });
   } finally {
-    // End the span if it was manually created
-    // Note: If the span was created by OpenTelemetry's HTTP instrumentation, it might be automatically ended
     if (parentSpan) {
       parentSpan.end();
     }
   }
 });
 
-// Start the server
-const server = app.listen(port, () => {
+const server = app.listen(port, async () => {
   console.log(`Server running at http://localhost:${port}`);
+  try {
+
+  } catch (error) {
+    console.error('Failed to connect to RabbitMQ:', error);
+  }
 });
 
-// Gracefully shut down the OpenTelemetry SDK and the server
 const gracefulShutdown = () => {
-  server.close(() => {
-    console.log("Server stopped");
-    sdk
-      .shutdown()
-      .then(() => console.log("Tracing terminated"))
-      .catch((error) => console.error("Error shutting down tracing", error))
-      .finally(() => process.exit(0));
+  console.log("Initiating graceful shutdown...");
+  server.close(async () => {
+    console.log("HTTP server closed.");
+    if (rabbitConnection) {
+      await rabbitConnection.close();
+      console.log("RabbitMQ connection closed.");
+    }
+    tracerProvider.shutdown().then(() => {
+      console.log("Tracing terminated.");
+      process.exit(0);
+    }).catch((error) => console.error("Error shutting down tracing", error));
   });
 };
 
-// Listen for termination signals
 process.on("SIGTERM", gracefulShutdown);
 process.on("SIGINT", gracefulShutdown);
